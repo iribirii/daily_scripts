@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Author: Inigo Iribarren
+# 06-10-2021
+
+# Description:
+# This scripts creates a basic 3D plot of the MEP of a selected molecule.
+
+# Requirements:
+# 	An XYZ file called 		$name.xyz
+# 	Density file called 	$name_DENS.cube
+# 	MEP file called 		$name_MEP.cube
+# 	Critical points file 	$name_CRIT.txt 	(optional)
+
+# Usage:
+# 	mep_jmol $name.xyz $mep_positive_cutoff (optional) $mep_negative_cutoff (optional)
+
+file=$1
+name=$(echo $file | cut -d '.' -f 1) 
+xyz=$name'.xyz'
+dens=$name'_DENS.cube'
+mep=$name'_MEP.cube'
+crit=$name'_CRIT.txt'
+n=0
+n_sphere=0
+
+# Check that the required files exist
+if [ ! -f "$xyz" ]; then
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    echo '!! ERROR: XYZ FILE DOES NOT EXIST !!'
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    exit 1
+elif [ ! -f "$dens" ]; then
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    echo '!! ERROR: DENS FILE DOES NOT EXIST !!'
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    exit 1
+elif [ ! -f "$mep" ]; then
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    echo '!! ERROR: MEP FILE DOES NOT EXIST !!'
+    echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    exit 1
+fi
+
+# Checking if the cutoffs where specified or not
+if [ -z $2 ]
+then
+	m_pos_cutoff=$2
+else
+	m_pos_cutoff=0.05
+fi
+if [ -z $3 ]
+then
+	m_neg_cutoff=$2
+else
+	m_neg_cutoff=-0.05
+fi
+
+# Prepares the basic MEP with no Critical points.
+echo "load ${name}.xyz" > $name"_mep.jmol"
+
+echo "isosurface mep cutoff 0.001 $dens color absolute $m_neg_cutoff $m_pos_cutoff $mep" >> $name"_mep.jmol"
+echo "color \$mep translucent" >> $name"_mep.jmol"
+echo "color background white" >> $name"_mep.jmol"
+
+# If CRIT file exists, create the spherical representation of the critical points
+# Blue spheres for maximas
+# Black spheres for minima
+
+if [ -f "$crit" ]; then
+	while IFS= read line
+	do
+		n=$((n+1))
+		palabra=`echo "$line" | awk '{print $4}'`
+		if [ "$palabra" = maxima: ]
+		then
+			max=$n
+		fi
+	done < "${name}_CRIT.txt"
+	
+	head -n $((max-2)) ${name}_CRIT.txt | tail -n +3 > min.txt 
+	tail -n +$((max+2)) ${name}_CRIT.txt > max.txt
+	
+	sed 's/*/ /g' min.txt > min1.txt
+	mv min1.txt min.txt
+	
+	sed 's/*/ /g' max.txt > max1.txt
+	mv max1.txt max.txt
+	
+	while IFS= read line_min
+	do
+		n_sphere=$((n_sphere+1))
+		mep=`echo $line_min | awk '{print $2}'`
+		x=`echo $line_min | awk '{print $5}'`
+		y=`echo $line_min | awk '{print $6}'`
+		z=`echo $line_min | awk '{print $7}'`
+	
+		echo "draw sphere$n_sphere diameter 0.4 {$x $y $z} color cyan #MEP in a.u. $mep" >> $name"_mep.jmol"
+	
+	done < "./min.txt"
+	
+	while IFS= read line_max
+	do
+		n_sphere=$((n_sphere+1))
+		mep=`echo $line_max | awk '{print $2}'`
+		x=`echo $line_max | awk '{print $5}'`
+		y=`echo $line_max | awk '{print $6}'`
+		z=`echo $line_max | awk '{print $7}'`
+	
+		echo "draw sphere$n_sphere diameter 0.4 {$x $y $z} color black  #MEP in a.u. $mep" >> $name"_mep.jmol"
+	
+	done < "./max.txt"
+	
+	rm max.txt
+	rm min.txt
+fi

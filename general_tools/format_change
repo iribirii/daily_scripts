@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Author: Inigo Iribarren 
+# 06-10-2021
+
+# Description:
+# This script takes all the files with a selected format $i and makes a copy with
+# another format $out
+
+# Usage:
+# 	format_change.sh $in $out
+
+if [ -z $2 ]
+then
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+	echo '!! ERROR: THERE MUST BE 2 ARGUMENTS (IN AND OUT)   !!'
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+fi
+
+in=$1
+out=$2
+
+names=$(ls *$1 | cut -d "." -f 1 )
+
+for i in $names
+do
+	cp $i'.'$in $i'.'$out
+done

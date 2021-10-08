@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Author: Inigo Iribarren
+# 06-10-2021
+
+# Description:
+# This script makes a.script file that aligns all the molecules/conformers
+# in a selected file using a selected SMARTS code.
+
+# If no SMARTS is specified it will use my prefered SMARTS to align chincona 
+# based catalysts
+
+# The number of conformers/molecules in the file has to be specified
+# The SMARTS code has to be written between ''
+
+# Usage:
+#   conformer_alignment $file_name $n_conformers $SMARTS_code
+
+file=$1
+name=$(echo $file | cut -d'.' -f1)
+n_conf=$2
+
+if [ -z $3 ]
+then
+    smarts='[N;d4][C;d3][C;d3]'
+else
+    smarts=$3
+fi
+
+echo "load $file" > ${name}_sorted.jmol
+for i in `seq 2 $n_conf`; do
+    echo "compare {1.${i}} {1.1} smarts '$smarts' rotate translate" >> ${name}_sorted.jmol
+done
+echo 'select all    ' >> ${name}_sorted.jmol
+echo 'spacefill off ' >> ${name}_sorted.jmol
+echo 'wireframe 0.1 ' >> ${name}_sorted.jmol
+echo 'color background white' >> ${name}_sorted.jmol
+
